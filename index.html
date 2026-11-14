@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#123c52">
+  <title>مختبر تصميم شبكات المياه — الإصدار الرابع</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <main class="app">
+
+    <!-- رأس التطبيق -->
+    <header class="hero">
+      <div class="eyebrow">WATER NETWORK DESIGN LAB · VERSION 4</div>
+      <h1>مختبر تصميم شبكات المياه</h1>
+      <p>ارسم شبكة التوزيع، وأدخل بياناتها، ثم حلل سلوكها الهيدروليكي.</p>
+    </header>
+
+    <!-- أدوات التحكم -->
+    <section class="toolbar" aria-label="أدوات الشبكة">
+
+      <button type="button" id="addSource"
+              class="tool source-tool">
+        ＋ إضافة مصدر
+      </button>
+
+      <button type="button" id="addJunction" class="tool">
+        ＋ عقدة ربط
+      </button>
+
+      <button type="button" id="addDemand" class="tool">
+        ＋ عقدة استهلاك
+      </button>
+
+      <button type="button" id="connect" class="tool">
+        ↔ رسم أنبوب
+      </button>
+
+      <button type="button" id="calculateNetwork"
+              class="tool calculate-tool">
+        ⚙ تحليل هيدروليكي
+      </button>
+
+      <select id="solverMethod">
+  <option value="globalGradient" selected>
+    التدرج العام (GGA) -- الموصى به
+  </option>
+  <option value="newton">
+    نيوتن–رافسون المتزامن
+  </option>
+  <option value="hardyCross">
+    هاردي كروس
+  </option>
+</select>
+
+      <button type="button" id="deleteElement"
+              class="tool danger">
+        حذف المحدد
+      </button>
+
+      <button type="button" id="undoAction" class="tool">
+        ↩️ تراجع
+      </button>
+
+      <button type="button" id="clearNetwork" class="tool">
+        شبكة جديدة
+      </button>
+
+    </section>
+
+    <!-- مساحة رسم الشبكة -->
+    <section class="workspace">
+
+      <div class="canvas-heading">
+        <h2>مساحة تصميم الشبكة</h2>
+        <span id="modeBadge">وضع التحديد</span>
+      </div>
+
+      <div class="canvas-wrap">
+
+        <svg id="network"
+             viewBox="0 0 800 500"
+             preserveAspectRatio="xMidYMid meet"
+             role="img"
+             aria-label="مساحة رسم شبكة المياه">
+
+          <defs>
+
+            <pattern id="grid"
+                     width="25"
+                     height="25"
+                     patternUnits="userSpaceOnUse">
+
+              <path d="M 25 0 L 0 0 0 25"
+                    class="grid-line"
+                    fill="none"/>
+            </pattern>
+
+            <marker id="flowArrow"
+                    markerWidth="8"
+                    markerHeight="8"
+                    refX="6"
+                    refY="3"
+                    orient="auto"
+                    markerUnits="strokeWidth">
+
+              <path d="M0,0 L0,6 L6,3 z"
+                    fill="#176b87"/>
+            </marker>
+
+          </defs>
+
+          <rect width="800"
+                height="500"
+                fill="url(#grid)"/>
+
+          <g id="pipesLayer"></g>
+          <g id="nodesLayer"></g>
+
+        </svg>
+
+      </div>
+
+      <p id="status" class="status" aria-live="polite">
+        أضف مصدرًا أو عقدة للبدء.
+      </p>
+
+    </section>
+
+    <!-- تقرير التحليل -->
+    <section class="details analysis-panel">
+
+      <div class="analysis-heading">
+        <h2>نتائج التحليل الهيدروليكي</h2>
+
+        <span id="analysisBadge" data-state="idle">
+          لم يُحسب بعد
+        </span>
+      </div>
+
+      <div id="analysisReport" aria-live="polite">
+        <p class="muted">
+          أكمل بيانات المصدر والعقد والأنابيب،
+          ثم اضغط «تحليل هيدروليكي».
+        </p>
+      </div>
+
+    </section>
+
+    <!-- خواص المياه ومواد الأنابيب -->
+    <section class="details">
+
+      <h2>خصائص المياه ومواد الأنابيب</h2>
+
+      <div class="field-grid material-grid">
+
+        <div class="field">
+          <label for="waterTemp">
+            درجة حرارة الماء (°C)
+          </label>
+
+          <input
+            id="waterTemp"
+            type="number"
+            min="0"
+            max="100"
+            step="0.1"
+            value="20"
+          >
+
+          <small class="field-help">
+            القيمة الافتراضية 20 درجة مئوية.
+          </small>
+        </div>
+
+        <div class="field">
+          <label for="materialSelect">
+            مادة الأنابيب
+          </label>
+
+          <select id="materialSelect">
+            <option value="0.0000015">
+              PVC / بلاستيك -- 0.0015 مم
+            </option>
+
+            <option value="0.00015" selected>
+              خشونة افتراضية -- 0.15 مم
+            </option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="materialRoughness">
+            الخشونة المطلقة (م)
+          </label>
+
+          <input
+            id="materialRoughness"
+            type="number"
+            min="0"
+            step="any"
+            value="0.00015"
+          >
+        </div>
+
+      </div>
+
+      <button type="button" id="applyMaterial"
+              class="save-button">
+        تطبيق الخشونة على جميع الأنابيب
+      </button>
+
+    </section>
+
+    <!-- بيانات العنصر المحدد -->
+    <section class="details">
+
+      <h2>بيانات العنصر المحدد</h2>
+
+      <div id="detailsContent">
+        <p class="muted">
+          اختر عقدة أو أنبوبًا لعرض بياناته.
+        </p>
+      </div>
+
+    </section>
+
+    <!-- ملخص الشبكة -->
+    <section class="summary">
+
+      <article>
+        <span>عدد العقد</span>
+        <strong id="nodeCount">0</strong>
+      </article>
+
+      <article>
+        <span>عدد الأنابيب</span>
+        <strong id="pipeCount">0</strong>
+      </article>
+
+      <article>
+        <span>إجمالي الطلب المدخل</span>
+        <strong id="totalDemand">0</strong>
+        <small>لتر/ثانية</small>
+      </article>
+
+    </section>
+
+    <!-- إدارة ملفات المشروع -->
+    <div class="save-row project-actions">
+
+      <button type="button" id="saveProject"
+              class="save-button">
+        حفظ الشبكة
+      </button>
+
+      <button type="button" id="loadProject"
+              class="save-button secondary-button">
+        استعادة الحفظ
+      </button>
+
+      <button type="button" id="exportProject"
+              class="save-button secondary-button">
+        تصدير JSON
+      </button>
+
+    </div>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
